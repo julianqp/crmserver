@@ -1,6 +1,7 @@
 // Importamos los modelos
 const Usuario = require("../models/Usuario");
 const Cliente = require("../models/Cliente");
+const Producto = require("../models/Producto");
 
 // importamos las librerias necesarias
 const bcryptjs = require("bcryptjs");
@@ -56,6 +57,21 @@ const resolvers = {
         throw new Error("No tiene permisos para este cliente.");
       }
       return existeCliente;
+    },
+    obtenerProductos: async () => {
+      // Encuentra todos los productos
+      const productos = await Producto.find({});
+      // devuelve los productos
+      return productos;
+    },
+    obtenerProducto: async (_, { id }) => {
+      // Buscamos si el producto existe
+      const producto = await Producto.findById(id);
+      if (!producto) {
+        throw new Error("Producto no encontrado");
+      }
+      // Devolvemos el producto
+      return producto;
     },
   },
   Mutation: {
@@ -155,6 +171,17 @@ const resolvers = {
       // Eliminamos el cliente
       await Cliente.findByIdAndDelete({ _id: id });
       return "Cliente eliminado";
+    },
+    nuevoProducto: async (_, { input }) => {
+      try {
+        // Creamos el nuevo producto
+        const newProducto = new Producto(input);
+        // Guardamos el producto en la base de datos
+        const producto = await newProducto.save();
+        return producto;
+      } catch (error) {
+        throw new Error(error.nessage);
+      }
     },
   },
 };

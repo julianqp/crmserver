@@ -20,6 +20,14 @@ const typeDefs = gql`
     creado: String
   }
 
+  type Producto {
+    id: ID
+    nombre: String
+    existencia: Int
+    precio: Float
+    creado: String
+  }
+
   type Token {
     token: String
   }
@@ -39,6 +47,12 @@ const typeDefs = gql`
     telefono: String
   }
 
+  input ProductoInput {
+    nombre: String!
+    existencia: Int!
+    precio: Int!
+  }
+
   type Query {
     ## USUARIO
     # Obtener un usuario
@@ -48,6 +62,11 @@ const typeDefs = gql`
     obtenerClientesVendedor: [Cliente]
     #Obtiene la informacion de un cliente
     obtenerCliente(id: ID!): Cliente
+    ## PRODUCTO
+    #Obtiene la informacion de los productos
+    obtenerProductos: [Producto]
+    #Obtiene la informacion de un producto
+    obtenerProducto(id: ID!): Producto
   }
   type Mutation {
     ## USUARIO
@@ -63,6 +82,9 @@ const typeDefs = gql`
     actualizarCliente(id: ID!, input: ClienteInput): Cliente
     # Eliminar a un cliente
     eliminarCliente(id: ID!): String
+    ## PRODUCTO
+    #Obtiene la informacion de un cliente
+    nuevoProducto(input: ProductoInput): Producto
   }
 `;
 
