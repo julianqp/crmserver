@@ -1,9 +1,11 @@
 // Importamos los modelos
 const Usuario = require("../models/Usuario");
+const Cliente = require("../models/Cliente");
 
 // importamos las librerias necesarias
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { findById } = require("../models/Usuario");
 require("dotenv").config({ path: "variables.env" });
 
 // Funcion que crea un token de autenticacion
@@ -16,13 +18,44 @@ const crearToken = (usuario, secreta, expiresIn) => {
 const resolvers = {
   Query: {
     obtenerUsuario: async (_, {}, ctx) => {
-      const id = "5f30104b806d47501c47c4d7";
+      if (!ctx.usuario) {
+        throw new Error("Falta token usuario");
+      }
+      const { id } = ctx.usuario;
       const usuario = await Usuario.findById(id);
 
       if (!usuario) {
         throw new Error("El usuario no existe");
       }
       return usuario;
+    },
+    obtenerClientesVendedor: async (_, {}, ctx) => {
+      // Devolvemos error si no nos llega vendedor
+      if (!ctx.usuario) {
+        throw new Error("Sin autorización");
+      }
+      // Buscamos los clientes registrados por el vendedor
+      try {
+        const resultado = await Cliente.find({
+          vendedor: ctx.usuario.id.toString(),
+        });
+        return resultado;
+      } catch (error) {
+        throw new Error(error.message);
+      }
+    },
+    obtenerCliente: async (_, { id }, ctx) => {
+      // Revisamos si existe el cliente
+      const existeCliente = await Cliente.findById(id);
+
+      if (!existeCliente) {
+        throw new Error("El cliente no existe");
+      }
+      // Y si el vendedor tiene permisos para ese usuario
+      if (existeCliente.vendedor.toString() !== ctx.usuario.id) {
+        throw new Error("No tiene permisos para este cliente.");
+      }
+      return existeCliente;
     },
   },
   Mutation: {
@@ -64,6 +97,64 @@ const resolvers = {
       // Creamos un nuevo token para el usuario
       const token = crearToken(existeUsuario, process.env.SECRETA, "24h");
       return { token };
+    },
+    nuevoCliente: async (_, { input }, ctx) => {
+      // comprobamos si el cliente ya ha sido registrado
+      const { email } = input;
+
+      const existeCliente = await Cliente.findOne({ email });
+      if (existeCliente) {
+        throw new Error("El cliente ya existe");
+      }
+
+      if (!ctx.usuario.id) {
+        throw new Error("El vendedor no existe");
+      }
+
+      // Se crea el nuevo cliente
+      const newCliente = new Cliente(input);
+      // Insertamos el vendedor
+      newCliente.vendedor = ctx.usuario.id;
+
+      // Insertamos el cliente
+      try {
+        const resultado = await newCliente.save();
+        return resultado;
+      } catch (error) {
+        throw new Error(error.message);
+      }
+    },
+    actualizarCliente: async (_, { id, input }, ctx) => {
+      // Buscamos si existe el cliente
+      let cliente = await Cliente.findById(id);
+      if (!cliente) {
+        throw new Error("El cliente no existe.");
+      }
+      // Revisamos si el vendedor tiene los permisos necesarios
+      if (cliente.vendedor.toString() !== ctx.usuario.id) {
+        throw new Error("No tiene permisos para este cliente.");
+      }
+      // Actualizamos la información del cliente
+      cliente = await Cliente.findOneAndUpdate({ _id: id }, input, {
+        new: true,
+      });
+
+      return cliente;
+    },
+    eliminarCliente: async (_, { id }, ctx) => {
+      // Comprobamos si el cliente existe
+      const cliente = await Cliente.findById(id);
+
+      if (!cliente) {
+        throw new Error("El cliente no existe");
+      }
+      // Comprobamos si el vendedor tiene permisos
+      if (cliente.vendedor.toString() !== ctx.usuario.id) {
+        throw new Error("No tiene permisos para este cliente.");
+      }
+      // Eliminamos el cliente
+      await Cliente.findByIdAndDelete({ _id: id });
+      return "Cliente eliminado";
     },
   },
 };

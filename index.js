@@ -7,11 +7,16 @@ require("dotenv").config({ path: "variables.env" });
 
 // Conectar a la base de datos
 connectDB();
-/*
-context: ({ req }) => {
+
+// servidor
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  introspection: true,
+  playground: true,
+  context: ({ req }) => {
     let token = req.headers["authorization"] || "";
     token = token.replace("Bearer ", "");
-    console.log({ token });
     if (token) {
       try {
         const palabra = process.env.SECRETA;
@@ -24,14 +29,7 @@ context: ({ req }) => {
       }
     }
     return {};
-  },*/
-
-// servidor
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  introspection: true,
-  playground: true,
+  },
 });
 
 //Srrancar el servidor
