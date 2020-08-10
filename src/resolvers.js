@@ -7,6 +7,7 @@ const Producto = require("../models/Producto");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { findById } = require("../models/Usuario");
+const Pedido = require("../models/Pedido");
 require("dotenv").config({ path: "variables.env" });
 
 // Funcion que crea un token de autenticacion
@@ -182,6 +183,119 @@ const resolvers = {
       } catch (error) {
         throw new Error(error.nessage);
       }
+    },
+    actualizarProducto: async (_, { id, input }) => {
+      // Comprobamos si el producto existe
+      let existeProducto = await Producto.findById(id);
+
+      if (!existeProducto) {
+        throw new Error("Producto no encotrado.");
+      }
+      // Actualizamos la información del producto
+      existeProducto = await Producto.findByIdAndUpdate({ _id: id }, input, {
+        new: true,
+      });
+      return existeProducto;
+    },
+    eliminarProducto: async (_, { id }) => {
+      // Comprobamos si el producto existe
+      let existeProducto = await Producto.findById(id);
+      if (!existeProducto) {
+        throw new Error("Producto no encotrado.");
+      }
+      // Eliminamos el producto
+      await Producto.findOneAndDelete({ _id: id });
+      return "Producto Eliminado";
+    },
+    nuevoPedido: async (_, { input }, ctx) => {
+      const { cliente } = input;
+      // Buscamos si el cliente existe
+      let existeCliente = await Cliente.findById(cliente);
+      if (!existeCliente) {
+        throw new Error("El cliente no existe");
+      }
+      // Comprobamos si el vendedor tiene permisos en ese cliente
+      if (existeCliente.vendedor.toString() !== ctx.usuario.id) {
+        throw new Error("No tiene permisos para este cliente.");
+      }
+
+      // Revisamos que el stock este disponible
+      for await (const articulo of input.pedido) {
+        const { id } = articulo;
+        const producto = await Producto.findById(id);
+        if (articulo.cantidad > producto.existencia) {
+          throw new Error(
+            `El articulo: ${producto.nombre} excede la cantidad disponible`
+          );
+        } else {
+          // Restar la cantidad a la disponible
+          producto.existencia = producto.existencia - articulo.cantidad;
+          await producto.save();
+        }
+      }
+      // Creamos un nuevo pedido
+      let nuevoPedido = new Pedido(input);
+      // Asignamos al vendedor
+      nuevoPedido.vendedor = ctx.usuario.id;
+      // Lo Guardamos en la base de datos
+      nuevoPedido = await nuevoPedido.save();
+      return nuevoPedido;
+    },
+    actualizarPedido: async (_, { id, input }, ctx) => {
+      const { cliente } = input;
+
+      // Comprobamos si el pedido existe
+      const existePedido = await Pedido.findById(id);
+      if (!existePedido) {
+        throw new Error("El pedido no existe");
+      }
+      // Comprobamos si el cliente existe
+      const existeCliente = await Cliente.findById(cliente);
+      if (!existeCliente) {
+        throw new Error("El Cliente no existe");
+      }
+      // Comprobamos si el vendedor tiene permisos en ese cliente
+      if (existeCliente.vendedor.toString() !== ctx.usuario.id) {
+        throw new Error("No tiene permisos para este cliente.");
+      }
+
+      // Revismos el stock
+      if (input.pedido) {
+        for await (const articulo of input.pedido) {
+          const { id } = articulo;
+
+          const producto = await Producto.findById(id);
+
+          if (articulo.cantidad > producto.existencia) {
+            throw new Error(
+              `El articulo: ${producto.nombre} excede la cantidad disponible`
+            );
+          } else {
+            // Actualizamos el stocj
+            producto.existencia = producto.existencia - articulo.cantidad;
+            await producto.save();
+          }
+        }
+      }
+      // Actualisamos el pedido en la base de datos
+      const resultado = await Pedido.findOneAndUpdate({ _id: id }, input, {
+        new: true,
+      });
+      return resultado;
+    },
+    eliminarPedido: async (_, { id }, ctx) => {
+      // Comprobamos si existe el pedido
+      const pedido = await Pedido.findById(id);
+      if (!pedido) {
+        throw new Error("El pedido no existe");
+      }
+      // Comprobamos si el vendedor tiene permisos en ese cliente
+      if (pedido.vendedor.toString() !== ctx.usuario.id) {
+        throw new Error("No tienes las credenciales");
+      }
+      // Eliminamos el producto de la base d datos
+      await Pedido.findOneAndDelete({ _id: id });
+      return "Pedido Eliminado";
     },
   },
 };
