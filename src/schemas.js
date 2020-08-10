@@ -45,6 +45,16 @@ const typeDefs = gql`
     estado: EstadoPedido
   }
 
+  type TopCliente {
+    total: Float
+    cliente: [Cliente]
+  }
+
+  type TopVendedor {
+    total: Float
+    vendedor: [Usuario]
+  }
+
   type Token {
     token: String
   }
@@ -94,16 +104,36 @@ const typeDefs = gql`
     ## USUARIO
     # Obtener un usuario
     obtenerUsuario: Usuario
+
     ## CLIENTE
     # Obtener los clientes de un vendedor
     obtenerClientesVendedor: [Cliente]
     #Obtiene la informacion de un cliente
     obtenerCliente(id: ID!): Cliente
+
     ## PRODUCTO
-    #Obtiene la informacion de los productos
+    # Obtiene la informacion de los productos
     obtenerProductos: [Producto]
-    #Obtiene la informacion de un producto
+    # Obtiene la informacion de un producto
     obtenerProducto(id: ID!): Producto
+
+    ## Pedidos
+    # Obtiene todos los pedidos
+    obtenerPedidos: [Pedido]
+    # Obtiene todos los pedidos de un vendedos
+    obtenerPedidosVendedor: [Pedido]
+    # Obtiene la informacion de un pedido
+    obtenerPedido(id: ID!): Pedido
+    # Obtiene los productos segun un estado
+    obtenerPedidosEstado(estado: String!): [Pedido]
+
+    ## Busquedas Avanzadas
+    # Devuelve los daors de los mejores clientes
+    mejoresClientes: [TopCliente]
+    # Devuelve los daors de los mejores vendedores
+    mejoresVendedores: [TopVendedor]
+    # Realiza la búsqueda de productos según nombre
+    buscarProducto(texto: String!): [Producto]
   }
   type Mutation {
     ## USUARIO
@@ -121,16 +151,19 @@ const typeDefs = gql`
     eliminarCliente(id: ID!): String
 
     ## PRODUCTO
-    # Obtiene la informacion de un cliente
+    # Crea un nuevo producto
     nuevoProducto(input: ProductoInput): Producto
     # Actualiza la información del producto
     actualizarProducto(id: ID!, input: ProductoInput): Producto
     # Elimina el producto
     eliminarProducto(id: ID!): String
 
-    # PEDIDO
+    ## PEDIDO
+    # Crea un nuevo pedido
     nuevoPedido(input: PedidoInput): Pedido
+    # Actualiza la informacion de un pedido
     actualizarPedido(id: ID!, input: PedidoInput): Pedido
+    # Elimina un pedido
     eliminarPedido(id: ID!): String
   }
 `;
